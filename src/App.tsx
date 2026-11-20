@@ -1,14 +1,24 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { AnimatePresence, motion, useInView, useReducedMotion } from "framer-motion";
-import { ArrowLeft, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, AtSign, HeartHandshake, MapPin, Maximize2, Menu, Pause, Phone, Play, ShieldCheck, Sparkles, X } from "lucide-react";
+import { ArrowLeft, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Clock3, AtSign, HeartHandshake, MapPin, Maximize2, Menu, Navigation, Pause, Phone, Play, ShieldCheck, Sparkles, X } from "lucide-react";
+import { ToothMark } from "./components/ToothMark";
+import { doctors, getDoctorBySlug, type Doctor } from "./data/doctors";
+import { DoctorProfilePage } from "./pages/DoctorProfilePage";
+import { getDoctorSlugFromRoute, getRoutePath, withBase } from "./utils/routes";
+
+const HOME_TITLE = "دندانپزشکی نن‌دخدون | لبخند شبیه خودت";
+const HOME_DESCRIPTION = "مرکز تخصصی دندانپزشکی نن‌دخدون؛ تجربه‌ای آرام، دقیق و متفاوت برای لبخند شما.";
 
 const services = [
-  { number: "۰۱", title: "دندانپزشکی زیبایی", text: "طراحی لبخند، کامپوزیت و لمینت با حفظ فرم طبیعی چهره" },
-  { number: "۰۲", title: "ایمپلنت و جراحی", text: "جایگزینی مطمئن دندان از دست‌رفته با روش‌های دقیق و کم‌تهاجمی" },
-  { number: "۰۳", title: "درمان ریشه", text: "درمان تخصصی درد و عفونت با تجهیزات به‌روز و آرامش بیشتر" },
-  { number: "۰۴", title: "دندانپزشکی کودکان", text: "تجربه‌ای امن و صمیمی برای اولین لبخندهای سالم کودک شما" },
-  { number: "۰۵", title: "ارتودنسی", text: "مرتب‌سازی دندان‌ها با طرح درمان اختصاصی و پیگیری منظم" },
-  { number: "۰۶", title: "پیشگیری و ترمیم", text: "معاینه، جرم‌گیری و ترمیم برای حفظ سلامت همیشگی دندان‌ها" },
+  { number: "۰۱", title: "خدمات کودکان", text: "محیطی شاد و آرام برای فرزندان شما، تا تجربه‌ای بدون ترس و خوشایند از دندانپزشکی داشته باشند و سلامت دهانشان تضمین شود" },
+  { number: "۰۲", title: "ترمیمی", text: "بازسازی دندان‌های پوسیده یا آسیب‌دیده با مواد باکیفیت و همرنگ دندان، برای بازگرداندن زیبایی و کارایی طبیعی آن‌ها" },
+  { number: "۰۳", title: "زیبایی", text: "طراحی لبخندی درخشان و جذاب با استفاده از جدیدترین متدهای ونیر کامپوزیت، لمینت سرامیکی و بلیچینگ" },
+  { number: "۰۴", title: "عصب‌کشی", text: "درمان تخصصی ریشه (اندو) با تجهیزات پیشرفته برای حفظ دندان طبیعی شما و رهایی همیشگی از درد دندان" },
+  { number: "۰۵", title: "پروتز", text: "جایگزینی دندان‌های از دست رفته با انواع روکش‌های ثابت و متحرک، با ظاهری کاملاً طبیعی و دوام بالا" },
+  { number: "۰۶", title: "ایمپلنت", text: "کاشت دندان به روش مدرن؛ بهترین و ماندگارترین جایگزین برای دندان‌های از دست رفته با عملکردی مشابه دندان طبیعی" },
+  { number: "۰۷", title: "انواع جراحی", text: "انجام جراحی‌های دندان عقل، لثه و سایر جراحی‌های دهانی با میزان درد کم و دوره نقاهت کوتاه" },
+  { number: "۰۸", title: "تشخیص بیماری", text: "معاینه دقیق و چکاپ کامل دهان و دندان برای تشخیص زودرس مشکلات و ضایعات با استفاده از تجهیزات تشخیصی دقیق" },
+  { number: "۰۹", title: "روانشناسی کودکان", text: "مدیریت رفتار و کاهش اضطراب کودکان قبل از درمان، برای ایجاد حس امنیت و همکاری بهتر آن‌ها در طول دندانپزشکی" },
 ];
 const faqs = [
   ["برای اولین مراجعه چه کاری باید انجام دهم؟", "کافی است از طریق فرم نوبت، زمان مناسب را انتخاب کنید. همکاران ما برای هماهنگی و توضیح مدارک لازم با شما تماس می‌گیرند."],
@@ -44,60 +54,6 @@ const reviews = [
   },
 ];
 
-const doctors = [
-  {
-    first: "سارا",
-    last: "محمدی",
-    role: "متخصص دندانپزشکی زیبایی و ترمیمی",
-    exp: "۱۲ سال تجربه",
-    img: "https://images.pexels.com/photos/5355860/pexels-photo-5355860.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=800",
-    link: "/doctors/sara-mohammadi",
-    bio: [
-      "فارغ‌التحصیل دندانپزشکی از دانشگاه تهران و عضو انجمن دندانپزشکی زیبایی ایران.",
-      "تمرکز او بر طراحی دیجیتال لبخند، کامپوزیت و لمینت با رویکرد حفظ بافت طبیعی دندان است.",
-      "او باور دارد زیبایی واقعی، لبخندی است که اصلا شبیه کار دندانپزشکی به نظر نرسد.",
-    ],
-  },
-  {
-    first: "امیر",
-    last: "کاظمی",
-    role: "متخصص ایمپلنت و جراحی فک و صورت",
-    exp: "۱۵ سال تجربه",
-    img: "https://images.pexels.com/photos/37458046/pexels-photo-37458046.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=800",
-    link: "/doctors/amir-kazemi",
-    bio: [
-      "بورد تخصصی جراحی فک و صورت از دانشگاه شهید بهشتی با بیش از دو هزار ایمپلنت موفق.",
-      "مجری روش‌های پیشرفته ایمپلنت فوری و پیوند استخوان در موارد پیچیده و بدون دندان.",
-      "صبر و توضیح گام‌به‌گام مراحل درمان، مهم‌ترین دلیل آرامش مراجعین اوست.",
-    ],
-  },
-  {
-    first: "مریم",
-    last: "احمدی",
-    role: "متخصص ارتودنسی",
-    exp: "۹ سال تجربه",
-    img: "https://images.pexels.com/photos/6749778/pexels-photo-6749778.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=800",
-    link: "/doctors/maryam-ahmadi",
-    bio: [
-      "متخصص ارتودنسی و فک و صورت، فعال در حوزه ارتودنسی ثابت، متحرک و نامرئی.",
-      "درمان‌های او با تحلیل کامل صورت و طراحی لبخند آغاز می‌شود، نه فقط مرتب‌سازی دندان‌ها.",
-      "پرونده‌های پیچیده فک و اختلال بایت، حوزه مورد علاقه و تمرکز حرفه‌ای اوست.",
-    ],
-  },
-  {
-    first: "نیما",
-    last: "شریفی",
-    role: "متخصص دندانپزشکی کودکان",
-    exp: "۷ سال تجربه",
-    img: "https://images.pexels.com/photos/5722163/pexels-photo-5722163.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=800",
-    link: "/doctors/nima-sharifi",
-    bio: [
-      "متخصص دندانپزشکی کودکان با تجربه کار با کودکان مضطرب و کودکان با نیازهای ویژه.",
-      "او با تکنیک‌های بازی‌محور و بی‌حس‌سازی آگاهانه، ترس اولین جلسه را از بین می‌برد.",
-      "تخصص او ساخت یک خاطره خوب از دندانپزشکی است، تا کودک در بزرگسالی به آن برگردد.",
-    ],
-  },
-];
 
 const psychologist = {
   title: "عضو تیم ما، ولی نه دندانپزشک!",
@@ -143,9 +99,6 @@ function PsychologistSection({ onBook }: { onBook: () => void }) {
   );
 }
 
-function ToothMark() {
-  return <div className="grid h-11 w-11 place-items-center rounded-full bg-white text-[#173f3a]"><svg viewBox="0 0 32 32" className="h-7 w-7" fill="none" aria-hidden="true"><path d="M9.4 5.4c2.2-1.7 4.2-.1 6.6-.1s4.4-1.6 6.6.1c3.4 2.7 1.1 8.2-.2 11.2-1.1 2.6-1 9.7-4.1 9.7-1.8 0-1.2-6.8-2.3-6.8s-.5 6.8-2.3 6.8c-3.1 0-3-7.1-4.1-9.7-1.3-3-3.6-8.5-.2-11.2Z" stroke="currentColor" strokeWidth="1.8"/><path d="M12.1 7.6c1.2.8 2.5 1.1 3.9 1.1" stroke="currentColor" strokeLinecap="round"/></svg></div>;
-}
 
 const gallery = [
   { src: "https://images.pexels.com/photos/4269268/pexels-photo-4269268.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=900&w=1200", caption: "اتاق درمان اصلی", span: "sm:col-span-2 sm:row-span-2" },
@@ -183,21 +136,30 @@ function Lightbox({ index, onClose, onNavigate }: { index: number; onClose: () =
   );
 }
 
-function DoctorCard({ doctor, index }: { doctor: (typeof doctors)[number]; index: number }) {
+function DoctorCard({ doctor, index, onNavigate }: { doctor: Doctor; index: number; onNavigate: (path: string) => void }) {
+  const doctorPath = `/doctors/${doctor.slug}`;
+  const handleDoctorLink = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    onNavigate(doctorPath);
+  };
+
   return (
     <motion.article initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-60px" }} transition={{ delay: (index % 2) * .1 }} className="group flex flex-col">
-      <div className="relative aspect-[4/3] overflow-hidden rounded-t-[10rem] bg-cover bg-center shadow-lg shadow-[#173f3a]/10" style={{ backgroundImage: `url(${doctor.img})` }}>
+      <a href={withBase(doctorPath)} onClick={handleDoctorLink} className="relative block aspect-[4/3] overflow-hidden rounded-t-[10rem] bg-cover bg-center shadow-lg shadow-[#173f3a]/10" style={{ backgroundImage: `url(${doctor.img})` }} aria-label={`مشاهده صفحه معرفی ${doctor.name}`}>
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0d302d]/90 via-[#0d302d]/25 to-transparent p-5 pt-24">
           <span className="rounded-full bg-[#edaa7f] px-3.5 py-1.5 text-xs font-bold text-[#173f3a]">{doctor.exp}</span>
         </div>
-      </div>
+      </a>
       <div className="flex flex-1 flex-col rounded-b-[2rem] border border-t-0 border-[#173f3a]/12 bg-white/70 p-7 md:p-8">
-        <h3 className="text-2xl font-extrabold">دکتر {doctor.first} {doctor.last}</h3>
+        <h3 className="text-2xl font-extrabold">{doctor.name}</h3>
         <p className="mt-1.5 font-medium text-[#c56f50]">{doctor.role}</p>
         <ul className="mt-6 flex-1 space-y-3.5">
           {doctor.bio.map((line, i) => <li key={i} className="flex gap-3 text-[.95rem] leading-8 text-[#5f6f6a]"><span className="mt-3.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#edaa7f]" /><span>{line}</span></li>)}
         </ul>
-        <a href={doctor.link} className="mt-7 inline-flex w-fit items-center gap-2.5 rounded-full border border-[#173f3a]/20 px-5 py-2.5 text-sm font-bold transition hover:border-[#173f3a] hover:bg-[#173f3a] hover:text-white">مشاهده پروفایل <ArrowLeft size={16} className="transition group-hover:-translate-x-1" /></a>
+        <a href={withBase(doctorPath)} onClick={handleDoctorLink} className="mt-7 inline-flex w-fit items-center gap-2.5 rounded-full border border-[#173f3a]/20 px-5 py-2.5 text-sm font-bold transition hover:border-[#173f3a] hover:bg-[#173f3a] hover:text-white">مشاهده پروفایل <ArrowLeft size={16} className="transition group-hover:-translate-x-1" /></a>
       </div>
     </motion.article>
   );
@@ -292,33 +254,77 @@ function ReviewsSection() {
   );
 }
 
-function BookingModal({ onClose }: { onClose: () => void }) {
-  const [sent, setSent] = useState(false);
-  useEffect(() => { document.body.style.overflow = "hidden"; return () => { document.body.style.overflow = ""; }; }, []);
-  return <motion.div className="fixed inset-0 z-[100] grid place-items-center bg-[#082d29]/70 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-    <motion.div dir="rtl" className="relative w-full max-w-xl rounded-[2rem] bg-[#faf8f2] p-7 text-[#173f3a] md:p-10" initial={{ y: 35, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 25, opacity: 0 }} onClick={(e) => e.stopPropagation()}>
-      <button onClick={onClose} className="absolute left-6 top-6 rounded-full p-2 transition hover:bg-black/5" aria-label="بستن"><X /></button>
-      {sent ? <div className="py-12 text-center"><div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-full bg-[#d6e9df]"><Check size={30} /></div><h3 className="text-2xl font-bold">درخواست شما ثبت شد</h3><p className="mt-3 text-[#5d716c]">برای هماهنگی نهایی، خیلی زود با شما تماس می‌گیریم.</p></div> : <><p className="text-sm font-bold text-[#c56f50]">رزرو آنلاین</p><h3 className="mt-2 text-3xl font-black">وقت لبخند شماست</h3><p className="mt-3 text-[#657772]">اطلاعاتتان را وارد کنید تا با شما تماس بگیریم.</p><form className="mt-8 space-y-4" onSubmit={(e) => { e.preventDefault(); setSent(true); }}><input required placeholder="نام و نام خانوادگی" className="field" /><input required inputMode="tel" placeholder="شماره تماس" className="field" /><select className="field appearance-none" defaultValue=""><option value="" disabled>خدمت مورد نظر</option>{services.map((item) => <option key={item.number}>{item.title}</option>)}</select><button className="mt-2 w-full rounded-full bg-[#173f3a] px-6 py-4 font-bold text-white transition hover:bg-[#c56f50]">ثبت درخواست نوبت</button></form></>}
-    </motion.div>
-  </motion.div>;
-}
-
 export default function App() {
-  const [booking, setBooking] = useState(false);
+  const [route, setRoute] = useState(() => getRoutePath());
   const [menu, setMenu] = useState(false);
   const [lightbox, setLightbox] = useState<number | null>(null);
   const scrollTo = (id: string) => { document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }); setMenu(false); };
+
+  useEffect(() => {
+    const onPopState = () => setRoute(getRoutePath());
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  const doctorSlug = getDoctorSlugFromRoute(route);
+  const activeDoctor = doctorSlug ? getDoctorBySlug(doctorSlug) : undefined;
+
+  useEffect(() => {
+    if (!doctorSlug) {
+      document.title = HOME_TITLE;
+      const metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc) metaDesc.setAttribute("content", HOME_DESCRIPTION);
+    }
+  }, [doctorSlug]);
+
+  const navigateTo = (target: string) => {
+    const [rawPath, hash] = target.split("#");
+    const cleanPath = rawPath || "/";
+    const fullUrl = `${withBase(cleanPath)}${hash ? `#${hash}` : ""}`;
+    window.history.pushState({}, "", fullUrl);
+    setRoute(getRoutePath(withBase(cleanPath)));
+    setMenu(false);
+    setLightbox(null);
+
+    if (hash) {
+      window.setTimeout(() => {
+        document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
+      }, 60);
+    } else {
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
+  };
+
+  if (activeDoctor) {
+    return <DoctorProfilePage doctor={activeDoctor} onNavigate={navigateTo} />;
+  }
+
+  if (doctorSlug) {
+    return (
+      <main dir="rtl" className="grid min-h-screen place-items-center bg-[#faf8f2] px-5 text-center text-[#173f3a]">
+        <div className="max-w-md">
+          <p className="eyebrow">خطای ۴۰۴</p>
+          <h1 className="mt-3 text-3xl font-black">پزشک مورد نظر پیدا نشد</h1>
+          <p className="mt-4 leading-8 text-[#687873]">صفحه معرفی مورد نظر در دسترس نیست. می‌توانید لیست کامل پزشکان کلینیک را در صفحه اصلی مشاهده کنید.</p>
+          <button type="button" onClick={() => navigateTo("/#doctors")} className="mt-8 inline-flex items-center gap-3 rounded-full bg-[#173f3a] px-7 py-4 font-bold text-white transition hover:bg-[#c56f50]">
+            بازگشت به لیست پزشکان <ArrowLeft size={18} aria-hidden="true" />
+          </button>
+        </div>
+      </main>
+    );
+  }
+
   return <main dir="rtl" className="overflow-hidden bg-[#faf8f2] text-[#173f3a]">
     <section className="hero relative min-h-[760px] text-white md:min-h-screen">
       <div className="absolute inset-0 bg-gradient-to-l from-[#0c3532]/95 via-[#0c3532]/60 to-[#0c3532]/10" />
       <header className="relative z-20 mx-auto flex max-w-[1400px] items-center justify-between px-5 py-6 md:px-10 lg:px-16">
         <button onClick={() => scrollTo("home")} className="flex items-center gap-3 text-right"><ToothMark /><span className="leading-tight"><b className="block text-xl">نن‌دخدون</b><small className="text-white/65">مرکز تخصصی دندانپزشکی</small></span></button>
         <nav className="hidden items-center gap-7 text-sm font-semibold lg:flex xl:gap-9"><button onClick={() => scrollTo("services")}>خدمات</button><button onClick={() => scrollTo("doctors")}>پزشکان ما</button><button onClick={() => scrollTo("psychologist")}>روانشناس</button><button onClick={() => scrollTo("about")}>درباره ما</button><button onClick={() => scrollTo("gallery")}>گالری</button><button onClick={() => scrollTo("experience")}>تجربه مراجعین</button><button onClick={() => scrollTo("contact")}>تماس با ما</button></nav>
-        <button onClick={() => setBooking(true)} className="hidden rounded-full border border-white/40 px-6 py-3 text-sm font-bold transition hover:bg-white hover:text-[#173f3a] sm:block">دریافت نوبت</button>
+        <button onClick={() => scrollTo("appointments")} className="hidden rounded-full border border-white/40 px-6 py-3 text-sm font-bold transition hover:bg-white hover:text-[#173f3a] sm:block">دریافت نوبت</button>
         <button onClick={() => setMenu(!menu)} className="rounded-full border border-white/30 p-3 lg:hidden" aria-label="منو">{menu ? <X /> : <Menu />}</button>
       </header>
       <AnimatePresence>{menu && <motion.nav initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="absolute left-5 right-5 top-24 z-30 flex flex-col gap-5 rounded-3xl bg-[#faf8f2] p-7 font-bold text-[#173f3a] shadow-2xl lg:hidden"><button onClick={() => scrollTo("services")}>خدمات</button><button onClick={() => scrollTo("doctors")}>پزشکان ما</button><button onClick={() => scrollTo("psychologist")}>روانشناس</button><button onClick={() => scrollTo("about")}>درباره ما</button><button onClick={() => scrollTo("gallery")}>گالری</button><button onClick={() => scrollTo("experience")}>تجربه مراجعین</button><button onClick={() => scrollTo("contact")}>تماس با ما</button></motion.nav>}</AnimatePresence>
-      <div id="home" className="relative z-10 mx-auto flex min-h-[630px] max-w-[1400px] items-end px-5 pb-20 md:min-h-[calc(100vh-100px)] md:items-center md:px-10 md:pb-12 lg:px-16"><motion.div initial={{ opacity: 0, y: 35 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .8 }} className="max-w-3xl"><div className="mb-5 flex items-center gap-3 text-sm text-white/75"><span className="h-px w-9 bg-[#edaa7f]" /> اینجا لبخندها ماندگار می‌شوند</div><h1 className="font-black leading-[.94] tracking-[-.055em]"><span className="block text-[clamp(4.7rem,12vw,10rem)] text-[#edaa7f]">نن‌دخدون</span><span className="mt-4 block text-[clamp(2rem,4.2vw,4.5rem)]">یک لبخند، شبیه خودِ تو</span></h1><p className="mt-7 max-w-xl text-base leading-8 text-white/78 md:text-lg">درمان دقیق، تکنولوژی روز و همراهی صمیمانه؛ برای اینکه تجربه دندانپزشکی شما آرام، روشن و مطمئن باشد.</p><div className="mt-9 flex flex-wrap gap-3"><button onClick={() => scrollTo("appointments")} className="group flex items-center gap-5 rounded-full bg-[#edaa7f] px-7 py-4 font-bold text-[#173f3a] transition hover:bg-white">رزرو نوبت آنلاین <ArrowLeft size={19} className="transition group-hover:-translate-x-1" /></button><a href="tel:02100000000" className="flex items-center gap-3 rounded-full border border-white/35 px-7 py-4 font-bold transition hover:bg-white/10"><Phone size={18} /> تماس با کلینیک</a></div></motion.div></div>
+      <div id="home" className="relative z-10 mx-auto flex min-h-[630px] max-w-[1400px] items-end px-5 pb-20 md:min-h-[calc(100vh-100px)] md:items-center md:px-10 md:pb-12 lg:px-16"><motion.div initial={{ opacity: 0, y: 35 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .8 }} className="max-w-3xl"><div className="mb-5 flex items-center gap-3 text-sm text-white/75"><span className="h-px w-9 bg-[#edaa7f]" /> اینجا لبخندها ماندگار می‌شوند</div><h1 className="font-black leading-[.94] tracking-[-.055em]"><span className="block text-[clamp(4.7rem,12vw,10rem)] text-[#edaa7f]">نن‌دخدون</span><span className="mt-4 block text-[clamp(2rem,4.2vw,4.5rem)]">بله، درست خوندی 😁</span></h1><p className="mt-7 max-w-xl text-base leading-8 text-white/78 md:text-lg">درمان دقیق، تکنولوژی روز و همراهی صمیمانه؛ برای اینکه تجربه دندانپزشکی شما آرام، روشن و مطمئن باشد.</p><div className="mt-9 flex flex-wrap gap-3"><button onClick={() => scrollTo("appointments")} className="group flex items-center gap-5 rounded-full bg-[#edaa7f] px-7 py-4 font-bold text-[#173f3a] transition hover:bg-white">رزرو نوبت آنلاین <ArrowLeft size={19} className="transition group-hover:-translate-x-1" /></button><a href="tel:02100000000" className="flex items-center gap-3 rounded-full border border-white/35 px-7 py-4 font-bold transition hover:bg-white/10"><Phone size={18} /> تماس با کلینیک</a></div></motion.div></div>
       <motion.div animate={{ y: [0, 10, 0] }} transition={{ repeat: Infinity, duration: 2.2 }} className="absolute bottom-7 left-8 z-10 hidden text-xs text-white/60 md:flex md:items-center md:gap-3"><span className="h-12 w-px bg-white/35" /> برای کشف بیشتر اسکرول کنید</motion.div>
     </section>
 
@@ -330,19 +336,19 @@ export default function App() {
           <p className="mt-4 max-w-md leading-8 text-white/65">برای دریافت نوبت و هماهنگی، با شماره ویژه بزرگسالان یا کودکان تماس بگیرید.</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <a href="tel:+982100000000" className="group flex min-h-36 items-center justify-between gap-4 border border-white/20 px-6 py-6 transition hover:border-[#edaa7f] hover:bg-white/5" aria-label="تماس برای رزرو نوبت دندانپزشکی بزرگسالان">
+          <a href="tel:+989013770151" className="group flex min-h-36 items-center justify-between gap-4 border border-white/20 px-6 py-6 transition hover:border-[#edaa7f] hover:bg-white/5" aria-label="تماس برای رزرو نوبت دندانپزشکی بزرگسالان">
             <span>
               <span className="block text-sm text-white/60">رزرو نوبت</span>
               <span className="mt-1 block text-lg font-bold">دندانپزشکی بزرگسالان</span>
-              <span dir="ltr" className="mt-3 block text-xl font-semibold tracking-wide text-[#edaa7f]">۰۲۱ ۰۰۰۰ ۰۰۰۰</span>
+              <span dir="ltr" className="mt-3 block text-xl font-semibold tracking-wide text-[#edaa7f]">۰۹۰۱ ۳۷۷ ۰۱۵۱</span>
             </span>
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#edaa7f] text-[#173f3a] transition group-hover:scale-105"><Phone size={19} /></span>
           </a>
-          <a href="tel:+982100000001" className="group flex min-h-36 items-center justify-between gap-4 border border-white/20 px-6 py-6 transition hover:border-[#edaa7f] hover:bg-white/5" aria-label="تماس برای رزرو نوبت دندانپزشکی کودکان">
+          <a href="tel:+989901303881" className="group flex min-h-36 items-center justify-between gap-4 border border-white/20 px-6 py-6 transition hover:border-[#edaa7f] hover:bg-white/5" aria-label="تماس برای رزرو نوبت دندانپزشکی کودکان">
             <span>
               <span className="block text-sm text-white/60">رزرو نوبت</span>
               <span className="mt-1 block text-lg font-bold">دندانپزشکی کودکان</span>
-              <span dir="ltr" className="mt-3 block text-xl font-semibold tracking-wide text-[#edaa7f]">۰۲۱ ۰۰۰۰ ۰۰۰۱</span>
+              <span dir="ltr" className="mt-3 block text-xl font-semibold tracking-wide text-[#edaa7f]">۰۹۹۰ ۱۳۰ ۳۸۸۱</span>
             </span>
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#edaa7f] text-[#173f3a] transition group-hover:scale-105"><Phone size={19} /></span>
           </a>
@@ -357,18 +363,18 @@ export default function App() {
         <div><p className="eyebrow">تیم ما</p><h2 className="section-title mt-4">پزشکان ما</h2></div>
         <p className="max-w-md leading-8 text-[#687873]">تیمی از دندانپزشکان متخصص و باتجربه؛ هر کدام در حوزه خود بهترین هستند و همراه شما از اولین معاینه تا آخرین لبخند.</p>
       </div>
-      <div className="mt-16 grid gap-x-10 gap-y-14 sm:grid-cols-2">{doctors.map((doctor, i) => <DoctorCard key={doctor.link} doctor={doctor} index={i} />)}</div>
+      <div className="mt-16 grid gap-x-10 gap-y-14 sm:grid-cols-2">{doctors.map((doctor, i) => <DoctorCard key={doctor.slug} doctor={doctor} index={i} onNavigate={navigateTo} />)}</div>
     </section>
 
     <PsychologistSection onBook={() => scrollTo("appointments")} />
 
     <section id="about" className="bg-[#173f3a] text-white"><div className="grid min-h-[720px] lg:grid-cols-2"><motion.div initial={{ opacity: 0, scale: 1.04 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: .9 }} className="about-image min-h-[480px] lg:min-h-full" /><div className="flex items-center px-6 py-20 md:px-16 lg:px-[10%]"><div className="max-w-xl"><p className="eyebrow !text-[#edaa7f]">داستان ما</p><h2 className="section-title mt-4 text-white">اینجا، اول از همه شنیده می‌شوید</h2><p className="mt-7 text-lg leading-9 text-white/70">در نن‌دخدون باور داریم درمان خوب فقط مهارت پزشکی نیست. آگاهی، آرامش و اعتماد شما بخش مهمی از نتیجه است. برای همین پیش از هر اقدامی، با دقت می‌شنویم، شفاف توضیح می‌دهیم و بهترین مسیر را همراه شما انتخاب می‌کنیم.</p><div className="mt-10 space-y-5 border-t border-white/15 pt-8"><div className="flex items-center gap-4"><ShieldCheck className="text-[#edaa7f]" /><span>استانداردهای سخت‌گیرانه بهداشت و استریلیزاسیون</span></div><div className="flex items-center gap-4"><Sparkles className="text-[#edaa7f]" /><span>درمان محافظه‌کارانه با نتیجه‌ای طبیعی</span></div><div className="flex items-center gap-4"><Clock3 className="text-[#edaa7f]" /><span>احترام به زمان و برنامه‌ریزی دقیق درمان</span></div></div></div></div></div></section>
 
-    <section className="bg-[#edaa7f] px-5 py-24 text-[#173f3a] md:px-10 md:py-32"><motion.div initial={{ opacity: 0, y: 25 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mx-auto max-w-5xl text-center"><span className="text-6xl font-black opacity-30">“</span><h2 className="mx-auto -mt-3 max-w-4xl text-3xl font-black leading-[1.6] md:text-5xl">هدف ما فقط درمان دندان نیست؛ می‌خواهیم ترس از دندانپزشکی را برای همیشه از خاطرتان پاک کنیم.</h2><button onClick={() => setBooking(true)} className="mt-10 inline-flex items-center gap-4 rounded-full bg-[#173f3a] px-7 py-4 font-bold text-white transition hover:bg-white hover:text-[#173f3a]">شروع یک تجربه متفاوت <ArrowLeft size={19} /></button></motion.div></section>
+    <section className="bg-[#edaa7f] px-5 py-24 text-[#173f3a] md:px-10 md:py-32"><motion.div initial={{ opacity: 0, y: 25 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mx-auto max-w-5xl text-center"><span className="text-6xl font-black opacity-30">“</span><h2 className="mx-auto -mt-3 max-w-4xl text-3xl font-black leading-[1.6] md:text-5xl">هدف ما فقط درمان دندان نیست؛ می‌خواهیم ترس از دندانپزشکی را برای همیشه از خاطرتان پاک کنیم.</h2><button onClick={() => scrollTo("appointments")} className="mt-10 inline-flex items-center gap-4 rounded-full bg-[#173f3a] px-7 py-4 font-bold text-white transition hover:bg-white hover:text-[#173f3a]">شروع یک تجربه متفاوت <ArrowLeft size={19} /></button></motion.div></section>
 
     <section id="gallery" className="mx-auto max-w-[1300px] px-5 py-24 md:px-10 md:py-36">
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-        <div><p className="eyebrow">گالری تصاویر</p><h2 className="section-title mt-4">نگاهی به کلینیک ما</h2></div>
+        <div><p className="eyebrow">گالری تصاویر</p><h2 className="section-title mt-4">نن‌دخدون‌گرافی</h2></div>
         <p className="max-w-md leading-8 text-[#687873]">فضایی روشن، آرام و کاملا استریل؛ جایی که تجهیزات به‌روز در خدمت آرامش شما قرار گرفته است.</p>
       </div>
       <div className="mt-16 grid auto-rows-[200px] grid-cols-2 gap-4 sm:auto-rows-[220px] sm:grid-cols-4">
@@ -388,8 +394,7 @@ export default function App() {
 
     <section className="mx-auto max-w-4xl px-5 pb-28 md:px-10 md:pb-36"><div className="text-center"><p className="eyebrow">پرسش‌های متداول</p><h2 className="section-title mt-4">شاید سوال شما هم باشد</h2></div><div className="mt-14 border-t border-[#173f3a]/20">{faqs.map(([q, a]) => <details key={q} className="group border-b border-[#173f3a]/20 py-1"><summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-6 text-lg font-extrabold md:text-xl">{q}<ChevronDown className="shrink-0 transition group-open:rotate-180" /></summary><p className="max-w-2xl pb-7 leading-8 text-[#687873]">{a}</p></details>)}</div></section>
 
-    <footer id="contact" className="bg-[#0d302d] px-5 pb-8 pt-20 text-white md:px-10 md:pt-28"><div className="mx-auto max-w-[1300px]"><div className="grid gap-14 border-b border-white/15 pb-16 md:grid-cols-[1.1fr_.9fr]"><div><div className="flex items-center gap-3"><ToothMark /><b className="text-3xl">نن‌دخدون</b></div><h2 className="mt-9 max-w-2xl text-4xl font-black leading-[1.5] md:text-6xl">لبخند بعدی، می‌تواند لبخند شما باشد.</h2><button onClick={() => setBooking(true)} className="mt-9 inline-flex items-center gap-5 rounded-full bg-[#edaa7f] px-7 py-4 font-bold text-[#173f3a] transition hover:bg-white">دریافت نوبت <CalendarDays size={20} /></button></div><div className="space-y-7 self-end text-white/75"><a href="tel:02100000000" className="flex items-center gap-4 transition hover:text-white"><Phone className="text-[#edaa7f]" /> ۰۲۱ - ۰۰۰۰ ۰۰۰۰</a><div className="flex items-start gap-4"><MapPin className="mt-1 shrink-0 text-[#edaa7f]" /> تهران، خیابان شریعتی، بالاتر از میرداماد، پلاک ۱۲۰</div><div className="flex items-center gap-4"><Clock3 className="text-[#edaa7f]" /> شنبه تا پنج‌شنبه، ۹ تا ۲۰</div><a href="#" className="flex items-center gap-4 transition hover:text-white"><AtSign className="text-[#edaa7f]" /> nandakhdoon</a></div></div><div className="flex flex-col gap-3 pt-7 text-xs text-white/45 sm:flex-row sm:justify-between"><p>© ۱۴۰۴ کلینیک دندانپزشکی نن‌دخدون</p><p>تمام حقوق محفوظ است.</p></div></div></footer>
-    <AnimatePresence>{booking && <BookingModal onClose={() => setBooking(false)} />}</AnimatePresence>
+    <footer id="contact" className="bg-[#0d302d] px-5 pb-8 pt-20 text-white md:px-10 md:pt-28"><div className="mx-auto max-w-[1300px]"><div className="grid gap-14 border-b border-white/15 pb-16 md:grid-cols-[1.1fr_.9fr]"><div><div className="flex items-center gap-3"><ToothMark /><b className="text-3xl">نن‌دخدون</b></div><h2 className="mt-9 max-w-2xl text-4xl font-black leading-[1.5] md:text-6xl">لبخند بعدی، می‌تواند لبخند شما باشد.</h2><button onClick={() => scrollTo("appointments")} className="mt-9 inline-flex items-center gap-5 rounded-full bg-[#edaa7f] px-7 py-4 font-bold text-[#173f3a] transition hover:bg-white">دریافت نوبت <CalendarDays size={20} /></button></div><div className="space-y-7 self-end text-white/75"><a href="tel:+982122577341" className="flex items-center gap-4 transition hover:text-white"><Phone className="text-[#edaa7f]" />۰۲۱-۲۲۵۷۷۳۴۱ موارد غیر رزرو وقت</a><div className="space-y-4"><div className="flex items-start gap-4"><MapPin className="mt-1 shrink-0 text-[#edaa7f]" /> تهران، خیابان کلاهدوز (دولت)، ساختمان پزشکان نرگس</div><div className="flex flex-wrap gap-2.5 pr-10" aria-label="مسیریابی"><a href="https://maps.app.goo.gl/FPdRnaCgJ8hoBtsm9" target="_blank" rel="noopener noreferrer" aria-label="مسیریابی با گوگل مپ" className="group inline-flex items-center gap-2 rounded-full border border-white/25 px-4 py-2 text-sm font-semibold text-white transition hover:border-[#edaa7f] hover:bg-[#edaa7f] hover:text-[#173f3a]"><Navigation size={15} className="text-[#edaa7f] transition group-hover:text-[#173f3a]" aria-hidden="true" /> گوگل مپس</a><a href="https://nshn.ir/ac_bv7uXGxuI-C" target="_blank" rel="noopener noreferrer" aria-label="مسیریابی با نشان" className="group inline-flex items-center gap-2 rounded-full border border-white/25 px-4 py-2 text-sm font-semibold text-white transition hover:border-[#edaa7f] hover:bg-[#edaa7f] hover:text-[#173f3a]"><Navigation size={15} className="text-[#edaa7f] transition group-hover:text-[#173f3a]" aria-hidden="true" /> نشان</a><a href="https://balad.ir/p/6go2YO9Hwll6w5" target="_blank" rel="noopener noreferrer" aria-label="مسیریابی با بلد" className="group inline-flex items-center gap-2 rounded-full border border-white/25 px-4 py-2 text-sm font-semibold text-white transition hover:border-[#edaa7f] hover:bg-[#edaa7f] hover:text-[#173f3a]"><Navigation size={15} className="text-[#edaa7f] transition group-hover:text-[#173f3a]" aria-hidden="true" /> بلد</a></div></div><div className="flex items-center gap-4"><Clock3 className="text-[#edaa7f]" />همه‌روزه ساعت ۱۰ صبح تا ۸ شب با هماهنگی قبلی</div><a href="#" className="flex items-center gap-4 transition hover:text-white"><AtSign className="text-[#edaa7f]" /> nandakhdoon</a></div></div><div className="flex flex-col gap-3 pt-7 text-xs text-white/45 sm:flex-row sm:justify-between"><p>© ۱۴۰۴ کلینیک دندانپزشکی نن‌دخدون</p><p>تمام حقوق محفوظ است.</p></div></div></footer>
     <AnimatePresence>{lightbox !== null && <Lightbox index={lightbox} onClose={() => setLightbox(null)} onNavigate={setLightbox} />}</AnimatePresence>
   </main>;
 }
